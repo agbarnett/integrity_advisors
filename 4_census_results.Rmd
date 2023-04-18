@@ -1,0 +1,931 @@
+---
+title: 'A census of Australian Research integrity advisors: results'
+author: "Adrian Barnett"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  word_document:
+    toc: false
+    reference_docx: rmarkdown-styles-reference.docx
+---
+
+```{r setup, include=FALSE}
+# using formatting in Word document (see above)
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE, error=FALSE, comment='', dpi=400)
+options(width=1000) # Wide pages
+options(scipen=999) # avoid scientific presentation
+source('99_functions.R') # key functions
+library(dplyr)
+library(tidyr)
+library(janitor) # for tables with column totals
+library(stringr)
+library(flextable) # for nice tables
+#library(MKinfer) # for bootstrap t-test
+library(visdat) # for missing data
+library(naniar) # for missing data
+library(diagram) # for flow diagram
+library(MultinomialCI) # for confidence intervals
+  
+# graphics things:
+library(ggplot2)
+library(egg) # for inset plot
+library(gridExtra)
+g.theme = theme_bw() + theme(panel.grid.minor = element_blank())
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#999999", "#CC79A7") # colour-blind palette
+sample_colours = c('dodgerblue','darkorange') # colours for ?
+sample_colours = c('cadetblue','gold3') # alternative colours for ?
+bar_colours = c('mediumorchid2', 'seashell', 'darkgoldenrod2') # for disagree, neutral, agree
+bar_colours = c('deepskyblue2', 'mediumaquamarine', 'orange3') # for disagree, neutral, agree
+
+# get the data, from # 3_read_survey_data.R
+load('rdata/3_AnalysisReady.RData')
+```
+
+## Flow diagram
+
+```{r, include=FALSE}
+load('results/3_estimate_national.RData') # from 3_estimate_national_numbers.R
+load('rdata/flow_numbers.RData') # from 1_consort_diagram.R
+```
+
+The diagram below shows how we first approached institutions and then advisors. 
+
+```{r, fig.width=5, fig.height=6}
+# figure from '1_consort_diagram.R'
+knitr::include_graphics(path='figures/consort_flow.jpg')
+# for text below
+percent_behalf = filter(response_frame, type=='Behalf') %>% pull(p)
+percent_direct = filter(response_frame, type=='Direct') %>% pull(p)
+percent_overall = filter(response_frame, type=='Total') %>% pull(p)
+```
+
+Most institutions (N = `r not_contactable + not_available`) did not make the contact details of their Research Integrity Advisors publicly available. One institution had a separate approvals process for conducting research, and we were not able to complete this process.
+
+## Number of research integrity advisors
+
+The bar plot below shows the number of advisors from the `r known` institutions where this information was publicly available or that provided it on request.
+The modal number of advisors was 1, the median was `r median(numbers$n)` and the maximum `r max(numbers$n)`. The first to third quartile was `r quantile(numbers$n, 0.25)` to `r quantile(numbers$n, 0.75)`. The between-institution variation in advisor numbers is large.
+
+```{r}
+bplot = ggplot(data = numbers, aes(x=n))+
+  geom_bar(fill='dark orange', col='grey66')+
+  g.theme+
+  scale_x_continuous(breaks=c(1,10,20,30,40), expand = c(0.01,0.01))+
+  scale_y_continuous(breaks=seq(0,10,2))+ # avoid fractions
+  xlab('Number of research integrity advisors')+
+  ylab('Number of institutions')
+bplot
+ggsave(filename = 'figures/numbers_bar.jpg', plot= bplot, width=5, height=4, units='in', dpi=500)
+```
+
+We used a bootstrap approach to estimate the total national number of advisors and the uncertainty in this estimate. 
+We randomly imputed the number of RIAs for the `r unknown` institutions where we did not know the number of advisors, based on the observed numbers shown above. We then calculated the total number of advisors using the observed and imputed numbers. We repeated this imputation and calculation 1,000 times. The plot below shows the 1,000 bootstrap estimates of the national total.
+
+```{r}
+# get the estimates from 3_estimate_national_numbers.R
+hplot = ggplot(data = all_boot, aes(x = total))+
+  geom_histogram(fill='goldenrod1', col = 'grey66')+
+  g.theme+
+  ylab('Count')+
+  xlab('National number of advisors')
+hplot
+```
+
+The estimated median number of national advisors is `r median(all_boot$total)` with 1st quartile of `r quantile(all_boot$total, 0.25)` and 3rd quartile of `r quantile(all_boot$total, 0.75)`. A 95% bootstrap interval is `r quantile(all_boot$total, 0.025)` to `r quantile(all_boot$total, 0.975)`.
+
+## Questionnaire
+
+The total number of responses was `r nrow(data)`.
+The overall response percentage was `r percent_overall`% with `r rias_responded` responses from `r rias_with_email` emails. The response percentage from the direct invite from our team was `r percent_direct`%, whereas the response percentage from the five institutions that passed on our invite was much lower at `r percent_behalf`%.
+
+Text _in italics_ below is the wording used in the questionnaire.
+
+## _I consent to participate._
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q1_2", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# remainder of results is only for those who consented
+data = filter(data, !str_detect(q1_2,'No'))
+```
+
+The results below exclude the participant who did not consent.
+
+## _I am a current Research Integrity Advisor and/or was a Research Integrity Advisor this time last year._
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q1_3", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# save for later
+plot_current = results$plot
+# remainder of results is only for RIAs
+data = filter(data, str_detect(q1_3,'Yes'))
+```
+
+The results below exclude the participants who were not research integrity advisors.
+
+## _When did you role as a Research Integrity Advisor start?_ 
+
+Respondents were asked to give their start year and date. There were `r sum(is.na(data$yrmon_start))` missing responses. The earliest year in the questionnaire was 2016, but this was an error as the policy started before then. A number of respondents gave their starting year as an optional comment. 
+
+```{r start}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "yrmon_start", 
+                     ltype = 'question', 
+                     digits = 1, 
+                     type = 'continuous', 
+                     sample_colours = sample_colours)
+results$table
+#
+```
+
+### Histogram of start date
+
+```{r}
+results$plot
+```
+
+## _Are you still a Research Integrity Advisor?_ 
+
+```{r still}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = TRUE, 
+                     label = "q2_2", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+## Number of years in role
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "years_in_role", 
+                     ltype = 'question', 
+                     type = 'continuous', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+
+#### Boxplot
+
+The results are split by those who have left the role and those ongoing.
+
+```{r}
+# convert months to years
+to_plot = filter(data, !is.na(q2_2)) # exclude missing
+bplot = ggplot(data = to_plot, aes(x = q2_2, y = years_in_role)) +
+  geom_boxplot()+
+  g.theme+
+  xlab('Current Research Integrity Advisor')+
+  ylab('Years in role')
+bplot
+```
+
+
+# Training and workload
+
+## _Have you received training for your role as a Research Integrity Advisor?_
+
+### Initial training when starting the role
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q3_1_1", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# make bootstrap confidence interval for percent
+source('4_training_with_uncertainty.R')
+# save for later
+plot_training1 = results$plot
+```
+
+### Ongoing training during the role
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q3_1_2", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# save for later
+plot_training2 = results$plot
+```
+
+### Cross-tabulation of initial and ongoing training
+
+
+```{r}
+tab = tabyl(data, q3_1_1, q3_1_2) %>% 
+  adorn_percentages("all") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position = 'front') %>%
+  rename('Missing' = 'NA_') %>%
+  mutate(q3_1_1 = ifelse(is.na(q3_1_1), 'Missing', q3_1_1))
+names(tab)[1] = 'Initial training'
+ftab = flextable(tab) %>%
+  theme_box() %>%
+  autofit() %>%
+  add_header_row(values=c('','Ongoing training','Ongoing training','Ongoing training')) %>%
+  merge_h(part='header')
+ftab
+```
+
+Thirteen percent of respondents did not receive initial or ongoing training.
+
+## _In your opinion, has the amount of training for your role as a Research Integrity Advisory been ... _
+
+```{r training_amount}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = TRUE, 
+                     include.missing = FALSE, 
+                     label = "q3_2", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+
+# save for later
+plot_training_amount = results$plot
+```
+
+
+## _How much time have you spent in your role as a Research Integrity Advisor? Include the time spent providing advice, attending meetings, reading policies/guidelines, giving presentations and attending courses._ 
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q3_3", 
+                     digits = 1,
+                     ltype = 'question', 
+                     type = 'continuous', 
+                     sample_colours = sample_colours)
+results$table
+# for text
+zero_time = sum(data$q3_3==0, na.rm=TRUE)
+zero_time_percent = round(100*zero_time / sum(is.na(data$q3_3)==FALSE))
+```
+
+This is the number of days per month that the respondents work in their advisory role. We asked respondents to give an estimate of the average number of days per month spent giving advice. Respondents were also able to answer in terms of working days or full-time equivalent, and these estimates were converted to the monthly average.
+
+#### Histogram
+
+```{r}
+# made an inset because of the strong skew in the plot (grey66 to match previous)
+inset = ggplot(data = data, aes(x=q3_3)) +
+  geom_histogram(fill = sample_colours[1], col='grey66', binwidth=0.2)+ 
+  coord_cartesian(xlim=c(0,2))+ # truncate
+  xlab('')+
+  ylab('Count')+
+  g.theme
+plot_inset = results$plot + 
+  annotation_custom(
+    ggplotGrob(inset), 
+    xmin = 5, xmax = 21, ymin = 12, ymax = 70
+  )
+plot_inset
+# export
+ggsave(filename = 'figures/advisors_time.jpg', plot= plot_inset, width=5, height=4, units='in', dpi=500)
+```
+
+There was a strong positive skew in the time as a few respondents indicated that all or most of their time is spent as an advisor. To examine the majority of responses in more detail, we used an inset plot that was truncated at 2 days. The inset shows a relatively large number of responses of 1 day per month. 
+
+The number of advisors reporting no time was `r zero_time` (`r zero_time_percent`%).
+
+#### Average time
+
+Here we estimate the average time spent in the role and account for uncertainty from non-responders and the uncertainty given by some respondents, e.g. "2 to 4 days".
+
+```{r}
+source('4_time_with_uncertainty.R') # 
+stats = calc_stats(indata = results, mult = 10)
+ftab = flextable(stats) %>%
+  theme_box() %>%
+  autofit()
+ftab
+```
+
+The table shows the estimated mean and median with the uncertainty (lower to upper 95% confidence interval). The mean is relatively high compared to the median because of the large outliers. Both estimates are still a small amount of time. It also shows the estimated percent who have spent no time.
+
+
+### Time spent in role - answer option
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q3_3_option", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+The table shows which of the three options was most often used to estimate their time spent in the role. FTE = full-time equivalent. The "Days" answer is their total working days.
+
+### Time spent in role - uncertainty
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q3_3_uncertainty", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+The table shows the number of respondents who indicated some uncertainty in their time spent in the role.
+
+## _In your role as a Research Integrity Advisor, how many times have you provided advice for staff and students?_
+
+#### Staff (average per month)
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q4_1_s", 
+                     digits = 1,
+                     ltype = 'question', 
+                     type = 'continuous', 
+                     sample_colours = sample_colours)
+results$table
+# for text
+text = sum(data$q4_1_s == 0, na.rm = TRUE)
+percent = round(100*text/nrow(data))
+```
+
+There were `r text` (`r percent`%) respondents who said they had not provided any help to staff.
+
+##### Histogram
+
+```{r}
+# make an inset because of the strong skew in the plot
+inset = ggplot(data = data, aes(x = q4_1_s)) +
+  geom_histogram(fill = sample_colours[1], col='grey66', binwidth=0.2)+
+  coord_cartesian(xlim=c(0,2))+ # truncate
+  xlab('')+
+  ylab('Count')+
+  g.theme
+plot_inset_staff = results$plot + 
+  theme(axis.title.x = element_text(size=9)) + # use smaller font to fit x-axis label
+  annotation_custom(
+    ggplotGrob(inset), 
+    xmin = 5, xmax = 20, ymin = 20, ymax = 130
+  )
+plot_inset_staff
+```
+
+#### Students (average per month)
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q4_1_p", 
+                     digits = 1,
+                     ltype = 'question', 
+                     type = 'continuous', 
+                     sample_colours = sample_colours)
+results$table
+# for text
+text = sum(data$q4_1_p == 0, na.rm = TRUE)
+percent = round(100*text/nrow(data))
+```
+
+There were `r text` (`r percent`%) respondents who said they had not provided any help to students.
+
+##### Histogram
+
+```{r}
+# make an inset because of the strong skew in the plot
+inset = ggplot(data = data, aes(x = q4_1_p)) +
+  geom_histogram(fill = sample_colours[1], col='grey66', binwidth=0.2)+
+  coord_cartesian(xlim=c(0,2))+ # truncate
+  xlab('')+
+  ylab('Count')+
+  g.theme
+plot_inset_students = results$plot + 
+  theme(axis.title.x = element_text(size=9)) + # use smaller font to fit x-axis label
+  annotation_custom(
+    ggplotGrob(inset), 
+    xmin = 5, xmax = 30, ymin = 20, ymax = 140
+  )
+plot_inset_students
+```
+
+We use an inset because the one outlier means most of the data is squashed in a narrow space.
+
+```{r, include=FALSE}
+# code for combined plot
+plot_inset_staff = plot_inset_staff + ggtitle('Staff') + xlab('Average number per month')
+plot_inset_students = plot_inset_students + ggtitle('Students')+ xlab('Average number per month')
+jpeg('figures/advisors_help_numbers.jpg', width=7, height=5, units='in', res=500, quality=100)
+grid.arrange(plot_inset_staff, plot_inset_students, ncol=2)
+invisible(dev.off())
+```
+
+#### Average help
+
+Here we estimate the amount of help provided to students and staff, and account for uncertainty from non-responders and the uncertainty indicated by some respondents, e.g. "2 to 4 times".
+
+```{r}
+source('4_help_with_uncertainty.R')
+
+## make table
+student_stats = calc_stats(indata = students, mult = 10) %>%
+  mutate(group = 'Students')
+staff_stats = calc_stats(indata = staff, mult = 10) %>%
+  mutate(group = 'Staff')
+table = bind_rows(student_stats, staff_stats) %>%
+  select(group, statistic, mean, lower, upper)
+ftab = flextable(table) %>%
+  merge_v(j=1) %>%
+  theme_box() %>%
+  autofit()
+ftab
+```
+
+The table shows the estimated mean and median with the uncertainty (lower to upper 95% confidence interval). It also shows the estimated percent who have not helped staff or students.
+
+### Times provided advice - answer option
+
+The tables below show which of the four options was most often used by respondents to estimate their times providing advice. 
+
+#### Staff
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = TRUE, # change to TRUE
+                     include.missing = FALSE, 
+                     label = "q4_1_option_s", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+#### Students
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = TRUE, 
+                     label = "q4_1_option_p", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+
+## _Have you provided advice about_
+
+```{r}
+# only for those who provided some advice
+to_table = mutate(data, any_advice == TRUE)
+#
+results = make_table_matrix(indata = to_table, 
+                            inlabels = labels, 
+                            ordered = FALSE, 
+                            ordered_row = 'Yes', 
+                            legend = c('Yes','No'), 
+                            bar_colours = bar_colours[c(1,3)], # do not use middle 'uncertain' colour
+                            remove = 'Have you provided advice about - ', 
+                            start = "q4_2", 
+                            expand_zero = TRUE, 
+                            include.missing = FALSE, 
+                            wrap_labels = 42)
+ftab = results$table %>%
+  width(j=1, width=3) # adjust column width
+ftab
+```
+
+These results do not include those advisors who said they have never provided any advice to staff or students.
+
+#### Bar plot
+
+```{r, fig.width=7}
+results$plot
+# export
+ggsave(filename = 'figures/advisors_help.jpg', plot= results$plot, width=5, height=4, units='in', dpi=500)
+```
+
+The rows in the bar plot are ordered by the percent of "Yes" answers. 
+The issue that came top was Authorship.
+
+## _Thinking about all the research integrity issues that you given advice on as part of your role. Do you think you were able to help the person who needed advice?_
+
+```{r}
+# only for those who provided some advice
+to_table = mutate(data, any_advice == TRUE)
+#
+results = make_table(indata = to_table, 
+                     inlabels = labels, 
+                     ordered = TRUE, 
+                     include.missing = FALSE, 
+                     label = "q4_3", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# save for later
+plot_training_amount = results$plot
+```
+
+These results do not include those advisors who said they have never provided any advice to staff or students.
+
+#### Bar plot
+
+```{r}
+results$plot
+```
+
+
+# Thoughts on role
+
+## _Do you agree or disagree with the following statements concerning your role as research integrity advisor:_
+
+```{r}
+#
+results = make_table_matrix(indata = data, 
+                            inlabels = labels, 
+                            ordered = TRUE, 
+                            ordered_row = 'Agree', 
+                            legend =  c('Disagree','Neither agree nor disagree','Agree'), # in this order
+                            bar_colours = rev(bar_colours), 
+                            remove = 'Do you agree or disagree with the following statements concerning your role as a Research Integrity Advisor: -',  
+                            start = "q5_1", 
+                            expand_zero = TRUE, 
+                            include.missing = FALSE, 
+                            wrap_labels = 55)
+ftab = results$table %>%
+  width(j=1, width=3) # adjust column width
+ftab
+```
+
+#### Bar plot
+
+```{r, fig.width = 7}
+# Reverse order of legend
+results$plot + scale_fill_manual(NULL, breaks = c('Disagree','Neither agree nor disagree','Agree'), values = bar_colours)
+#export
+ggsave(filename = 'figures/advisors_thoughts.jpg', plot= results$plot, width=7, height=5, units='in', dpi=500)
+```
+
+The rows in the bar plot are ordered by the percent of "Agree" answers.
+
+# Demographics
+
+## _Approximately how many years have you worked in research?_
+
+```{r years_experience}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "q5_2", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+# save for later
+plot_current = results$plot
+# for text
+text = sum(data$q5_2 == '0 years (I am not a researcher)', na.rm = TRUE)
+```
+
+Almost all of the advisors were senior researchers. 
+
+RIAs are supposed to have research experience, so the `r text` respondents who are not researchers may be not be aligned with the policy, however, they might still provide good advice.
+
+## Bar plot
+
+```{r, fig.width=7}
+results$plot
+```
+
+# Survey response results
+
+In this section we examine meta-data on the survey including the completeness and time taken.
+
+
+## Numbers not eligible, withdrawn and out-of-office
+
+```{r}
+## make counts
+# out of office
+out_of_office = filter(admin_data, str_detect(response, 'Out of office')) %>%
+  select(email) %>%
+  unique() %>% # remove those who were away for both
+  nrow()
+# not eligible
+not_eligible = filter(admin_data, response == 'Not eligible') %>%
+  nrow()
+# out of office
+withdrew = filter(admin_data, response == 'withdrawn') %>%
+  nrow()
+# bounced
+bounced = filter(admin_data, response == 'Bounced') %>%
+  nrow()
+```
+
+There were `r out_of_office` out-of-office emails and `r bounced` emails bounced as the address was no longer valid. The number who withdrew was `r withdrew`. The number not eligible was `r not_eligible`.
+
+## Response dates
+
+```{r}
+# bar plot
+bar = ggplot(data=data, aes(x = start_date))+
+  geom_bar(position='stack', fill=bar_colours[1], col='grey66')+
+  g.theme +
+  xlab('')+
+  ylab('Frequency')
+bar
+```
+
+The survey was launched on Monday 13 February 2023. Reminders were sent 2 weeks later (27 February) to non-responders and incomplete responders. The survey was closed on 13 March.
+
+## Questionnaire progress as a percent
+
+The table below shows the questionnaire progress as a percent, with the results grouped into three categories.
+
+```{r}
+#
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     include.missing = FALSE, 
+                     sample_colours = sample_colours, 
+                     label = "progress_cat", 
+                     ltype = 'question', 
+                     type = 'categorical')
+results$table
+```
+
+Most respondents completed most of the questions.
+
+## Time taken
+
+Time taken in minutes to complete the questions. 
+
+```{r}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     digits = 0, 
+                     include.missing = FALSE, 
+                     sample_colours = sample_colours,
+                   label = "duration_in_mins", 
+                   ltype='question', 
+                   type='continuous')
+results$table
+```
+
+The survey did not take long to complete.
+
+## Numerical summary of optional text comments
+
+```{r}
+# find all the comments:
+text = dplyr::select(data, all_of(comment_questions)) %>%
+  pivot_longer(cols=starts_with('q')) %>%
+  filter(!is.na(value))
+n_comments = nrow(text) # count the number of comments
+text = mutate(text, nchar = nchar(value),
+         nwords = lengths(gregexpr("\\W+", value)) + 1) %>%
+  group_by(name) %>%
+  summarise(n=n(), median = round(median(nwords))) %>% # number and length of comments
+  mutate(cell = paste(n, ' / ', median, sep='')) %>%
+  dplyr::select(-n, -median) %>%
+  left_join(labels, by=c('name' = 'names')) %>%
+  mutate(
+    section = str_remove_all(name, '^q|_.'),
+    labels = str_remove_all(labels, ' \\(Optional\\)')) %>%
+  dplyr::select(labels, 'cell') %>%
+  rename('question' = 'labels',
+         'Number of comments / median words' = 'cell')
+# table
+ftab = flextable(text) %>%
+  theme_box() %>%
+  width(j=1, width=4) %>%
+  width(j=2, width=2)
+ftab
+```
+
+The table shows the number of comments and the median number of words.
+
+The total number of comments was `r n_comments`.
+
+## Did they provide their email for further study?
+
+```{r email}
+results = make_table(indata = data, 
+                     inlabels = labels, 
+                     ordered = FALSE, 
+                     include.missing = FALSE, 
+                     label = "email_provided", 
+                     ltype = 'question', 
+                     type = 'categorical', 
+                     sample_colours = sample_colours)
+results$table
+```
+
+Respondents were asked about their interest to take part in a further qualitative study about their role as a Research Integrity Advisor. 
+
+## Missing data
+
+This section examines the item-missing data of missing responses to each question. The plot below shows what responses were missing (shown in grey), excluding optional comments. The questions are ordered according to the survey.
+
+```{r, include=FALSE}
+# remove variables that can't be missing 
+for_visdat = dplyr::select(data, any_advice, starts_with('q')) %>%
+  dplyr::select(!all_of(comment_questions)) %>% # remove comments
+  dplyr::select(any_advice, starts_with('q2'), starts_with('q3'), starts_with('q4'), starts_with('q5')) %>% # ordering to match survey
+  dplyr::select(-'q3_3_option', -contains('uncertainty'), -contains('option'), # remove generated variables
+     -contains('lower'), -contains('upper'), # remove uncertainty bounds
+     -contains('_text'), # remove optional "Other"
+     -'q2_3_1', -'q2_3_2', # are conditional on q2_2
+     -'q4_2_15', # other option
+     -'q5_1_9', # other option
+     -contains('_do_')) # remove random ordering variables
+
+## separate panels for those who did not provide any advice
+for_visdat1 = filter(for_visdat, any_advice == TRUE) %>%
+  select(-'any_advice')
+for_visdat2 = filter(for_visdat, any_advice == FALSE) %>%
+  select(-'any_advice', -starts_with('q4_2'), -starts_with('q4_3')) # remove questions only for those who gave advice
+
+# now make plots
+plot1 = vis_dat(for_visdat1, sort_type = FALSE) +
+  theme(legend.position = 'bottom',
+        plot.title = element_text(margin = margin(0,0,-10,0))) + # reduce space between title and plot
+  scale_y_continuous(expand=c(0,0)) +
+  ylab('Respondent')+
+  ggtitle('Have provided advice')
+glegend = g_legend(plot1) # get legend ... 
+plot1 = plot1 + theme(legend.position = 'none')  # ... now turn off legend
+plot2 = vis_dat(for_visdat2, sort_type = FALSE) +
+  theme(legend.position = 'none',
+        plot.title = element_text(margin = margin(0,0,-10,0))) +
+  scale_y_continuous(expand=c(0,0)) +
+  ylab('Respondent')+
+  ggtitle('Have not provided advice')
+#
+```
+
+```{r, fig.width=8, fig.height=8}
+grid.arrange(grobs=list(plot1, plot2, glegend), ncol=1, heights=c(1,1,0.1), main='')
+# export
+jpeg('figures/missing.jpg', width=5, height=6, units='in', res=500, quality=100)
+grid.arrange(grobs = list(plot1, plot2, glegend), ncol=1, heights=c(1,1,0.1))
+invisible(dev.off())
+```
+
+
+### Counts of missing data by question
+
+```{r}
+# separate numbers for those who did and did not give advice
+c1 = miss_var_summary(for_visdat1) %>%
+  mutate(N = nrow(for_visdat1))
+c2 = miss_var_summary(for_visdat2) %>%
+  mutate(N = nrow(for_visdat2))
+# combine numbers 
+nums = bind_rows(c1, c2) %>%
+  group_by(variable) %>%
+  summarise(nmiss = sum(n_miss),
+            n = sum(N)) %>%
+  ungroup() %>%
+  mutate(pct_miss = 100*nmiss/n) %>%
+  arrange(pct_miss, nmiss)
+#
+table = left_join(nums, labels, by=c('variable' = 'names')) %>% # add question labels
+  dplyr::select(labels, everything(), -variable) %>%
+#  mutate( # tidy up labels
+  rename(
+    'Question' = 'labels', 
+    'Maximum possible' = 'n',
+    'Number missing' = 'nmiss',
+    'Percent missing' = 'pct_miss') 
+
+# make table
+ftab = flextable(table) %>%
+  fontsize(size=9, part='all') %>%
+  theme_box() %>%
+  width(j=1, width=5) %>%
+  colformat_double(j=4, digits=0)
+ftab
+```
+
+The table rows are ordered by the variables with the most to least amount of missing.
+Most questions were reasonably well completed. 
+
+The question with the most amount of missing was the month they started in the role, which they were instructed to leave blank if they were unsure. Some of the questions on what advice they provided were also often blank, including Recognition of Aboriginal and Torres Strait Islander Peoples and Sexual harassment. 
+
+
+```{r, include=FALSE}
+# save results for plotting
+#save(research_area_plot_random, research_area_plot_nonrandom,
+#     gender_plot_random, gender_plot_nonrandom,
+#     years_plot_random, years_plot_nonrandom, 
+#     boxplot_grant, 
+#     how_often_plot_random, how_often_plot_nonrandom,
+#     aware_plot_random, aware_plot_nonrandom,
+#     understand_plot_random, understand_plot_nonrandom,
+#     write_anything_plot_random, write_anything_plot_nonrandom,
+#     panel_plot_random, panel_plot_nonrandom,
+#     comfort_plot_random, comfort_plot_nonrandom,
+#     time_adjustment_plot,
+#     dplot, scatter, # difference for peer reviewers,
+#     file='results/plots.RData')
+```
+
+## Response randomisation
+
+To reduce potential bias from response ordering, we randomised the order of response categories where possible. For example, the question on whether advisors thought they could help, was sometimes presented as "All to the time" to "None of the time", and at other times presenting  in the reverse order. Here we test whether this ordering influenced the responses.
+
+```{r, include=FALSE}
+## 1. amount of training
+exists = length(dir('results', pattern='random_latent_training'))>0
+if(exists == FALSE){
+  source('4_latent_models_training.R')
+}
+if(exists == TRUE){
+  load('results/4_random_latent_training.RData')
+}
+res1 = filter(to_table, rowname == 'order') %>%
+  mutate(outcome = 'Training')
+
+# 2. have they helped?
+exists = length(dir('results', pattern='random_latent_help'))>0
+if(exists == FALSE){
+  source('4_latent_models_help.R')
+}
+if(exists == TRUE){
+  load('results/4_random_latent_help.RData')
+}
+res2 = filter(to_table, rowname == 'order') %>%
+  mutate(outcome = 'Helped')
+
+# make joint table
+to_table = bind_rows(res1, res2) %>%
+  mutate(Mean = exp(mean),
+         lower = exp(lower),
+         upper = exp(upper),
+         Mean = round(Mean*100)/100,
+         lower = round(lower*100)/100,
+         upper = round(upper*100)/100,
+         CI = paste(lower, ' to ', upper, sep='')) %>%
+  select(outcome, Mean, CI)
+```
+
+```{r}
+ftab = flextable(to_table) %>%
+  theme_box() %>%
+  autofit()
+ftab
+```
+
+The table shows the odds ratios and 95% credible interval for the association between the randomised order the responses, and the probability of giving a more positive response. There is no strong association, indicating that respondents were not simply ticking the first or last responses.

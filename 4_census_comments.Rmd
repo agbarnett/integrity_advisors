@@ -1,0 +1,67 @@
+---
+title: 'Research integrity advisors census: optional comments'
+author: "Adrian Barnett"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  word_document:
+    toc: false
+    reference_docx: rmarkdown-styles-reference.docx
+---
+
+```{r setup, include=FALSE}
+# using formatting in Word document (see above)
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE, error=FALSE, comment='', dpi=400)
+options(width=1000) # Wide pages
+options(scipen=999) # avoid scientific presentation
+source('99_functions.R')
+library(dplyr)
+
+# get the data, from 3_read_qualtrics_api.R
+load('rdata/3_AnalysisReady.RData')
+```
+
+This document shows all the optional comments.  
+
+Text _in italics_ is the direct wording from the survey
+
+# _Any comments about when your role started or ended? (optional)_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q2_4')
+cat(text)
+```
+
+# _Do you have any comments on your training or time spent as a Research Integrity Advisor? (optional)_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q3_4')
+cat(text)
+```
+
+# _Do you have any comments on the advice you have provided or situations you have encountered? (optional)_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q4_4')
+cat(text)
+```
+
+# _Lastly, do you have comments about your role as a Research Integrity Advisor or about this research? (optional)_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q5_3')
+cat(text)
+```
+
+# _Have you provided advice about - Other, please specify_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q4_2_15_text')
+cat(text)
+```
+
+# _Do you agree or disagree with the following statements concerning your role - Other, please specify_
+
+```{r, results='asis'}
+text = comments(indata = data, question = 'q5_1_9_text')
+cat(text)
+```
