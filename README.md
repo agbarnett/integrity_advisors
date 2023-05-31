@@ -5,14 +5,14 @@ Analysis of the questions sent to Research Integrity Advisors in Australia in ea
 The main folder contains the R and Rmarkdown code needed to read in the raw data and run the analyses.
 
 The `rdata` folder contains:
-* 3_AnalysisReady_share.RData, plus an Excel version with the main data and labels
-* flow_numbers.RData, plus an Excel version
+* `3_AnalysisReady_share.RData`, plus an Excel version with the main data and labels
+* `flow_numbers.RData`, plus an Excel version
 
 The `figures` folder contains the key figures used in the paper.
 
-The `results` folder contains the modelling results for x and y.
+The `results` folder contains the modelling results for: the estimated national number of advisors, the latent variable models that test the effect of the random question ordering.
 
-The `checklist` folder contains the EQUATOR reporting checklists.
+The `checklist` folder contains the [EQUATOR](https://www.equator-network.org/) reporting checklists.
 
 The protocol, questions, and pre-print are available [here](https://osf.io/sptcg/) on the Open Science Framework (DOI 10.17605/OSF.IO/SPTCG).
 
