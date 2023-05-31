@@ -5,9 +5,8 @@ Analysis of the questions sent to Research Integrity Advisors in Australia in ea
 The main folder contains the R and Rmarkdown code needed to read in the raw data and run the analyses.
 
 The `rdata` folder contains:
-* 0_emails.RData 
-* 3_AnalysisReady.RData 
-* flow_numbers.RData 
+* 3_AnalysisReady_share.RData, plus an Excel version with the main data and labels
+* flow_numbers.RData, plus an Excel version
 
 The `figures` folder contains the key figures used in the paper.
 

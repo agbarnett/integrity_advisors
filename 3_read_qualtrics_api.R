@@ -236,5 +236,9 @@ for (s in sheets){
 admin_data = select(admin_data, -checker, -check_date)
 
 ### save ###
+# main version
 save(data, labels, ordering, comment_questions, admin_data, file='rdata/3_AnalysisReady.RData')
 cat('Number of data rows = ', nrow(data), '.\n', sep='')
+# version for sharing
+data = select(data, -all_of(comment_questions))
+save(data, labels, file='rdata/3_AnalysisReady_share.RData')
