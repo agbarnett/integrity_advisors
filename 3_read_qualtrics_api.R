@@ -239,6 +239,6 @@ admin_data = select(admin_data, -checker, -check_date)
 # main version
 save(data, labels, ordering, comment_questions, admin_data, file='rdata/3_AnalysisReady.RData')
 cat('Number of data rows = ', nrow(data), '.\n', sep='')
-# version for sharing
-data = select(data, -all_of(comment_questions))
+# version for sharing (ID has name of institution)
+data = select(data, -id, -all_of(comment_questions), -contains('text'))
 save(data, labels, file='rdata/3_AnalysisReady_share.RData')
