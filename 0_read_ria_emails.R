@@ -9,11 +9,10 @@ library(stringr)
 # institutions
 institutions = read_excel('data/RIA-main_13-01-2023.xlsx', sheet = 'all_institutions') %>%
   clean_names() %>%
-  select(-starts_with('x')) %>%
+  select(-starts_with('x')) %>% # remove unwanted columns
   filter(!str_detect(website, pattern = '^Same as')) # remove six duplicates institutions
 
-
-# Research Intergrity Advisors
+# Research Integrity Advisors
 rias = read_excel('data/RIA-main_13-01-2023.xlsx', sheet = 'contact_details') %>%
   clean_names() %>%
   filter(inst !='Dummy university')

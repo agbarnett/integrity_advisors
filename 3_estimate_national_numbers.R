@@ -6,7 +6,7 @@ library(readxl)
 
 ## start with data from the sheets
 contacts = read_excel('data/RIA-main_13-01-2023.xlsx', sheet = 'contact_details') 
-institutes = read_excel('data/RIA-main_13-01-2023.xlsx', sheet = 'all_institutes') 
+institutes = read_excel('data/RIA-main_13-01-2023.xlsx', sheet = 'all_institutions') 
 
 ## get the known advisor numbers per institute
 known = filter(contacts,

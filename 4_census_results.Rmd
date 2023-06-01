@@ -286,6 +286,12 @@ plot_training_amount = results$plot
 ## _How much time have you spent in your role as a Research Integrity Advisor? Include the time spent providing advice, attending meetings, reading policies/guidelines, giving presentations and attending courses._ 
 
 ```{r}
+#
+n_resp = filter(data, !is.na(q3_3)) %>% # 
+  select(id) %>%
+  unique() %>%
+  nrow()
+#
 results = make_table(indata = data, 
                      inlabels = labels, 
                      ordered = FALSE, 
@@ -419,6 +425,10 @@ plot_inset_staff
 #### Students (average per month)
 
 ```{r}
+n_resp = filter(data, !is.na(q4_1_p) | !is.na(q4_1_s)) %>% # for students or staff
+  select(id) %>%
+  unique() %>%
+  nrow()
 results = make_table(indata = data, 
                      inlabels = labels, 
                      ordered = FALSE, 
@@ -527,6 +537,7 @@ results$table
 ```{r}
 # only for those who provided some advice
 to_table = mutate(data, any_advice == TRUE)
+n_resp = length(unique(to_table$id)) # number of respondents to this question
 #
 results = make_table_matrix(indata = to_table, 
                             inlabels = labels, 

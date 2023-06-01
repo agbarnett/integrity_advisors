@@ -27,3 +27,5 @@ close(ofile)
 
 # export to CSV
 write.csv(all, file = 'data/all_institutes.csv', quote=FALSE, row.names=FALSE)
+
+# More complete list of who was approached in 3_estimate_national_numbers.R

@@ -12,10 +12,10 @@ load('data/0_emails.RData')
 ## Institutions
 # number of Institutions
 N_inst = nrow(institutions)
-available = sum(institutions$rias_available == TRUE) # publicly available
+available = sum(institutions$rias_available == TRUE) # publicly available RIAs
 not_available = sum(institutions$rias_available == FALSE)
-not_contactable = 1 # Deakin
-not_available = not_available - not_contactable
+not_contactable = 3 # Deakin plus two that were missed
+not_available = not_available - not_contactable # remove not contactable from not available
 # number of RIAs
 rias_first_pass = sum(rias$email != '', na.rm = TRUE) # number of publicly available RIAs with email
 # number in second pass (shared or part shared)
@@ -39,7 +39,7 @@ inst_not_supplied = not_available - inst_supplied - nrow(inst_pass) - inst_not_r
 
 ## Research integrity advisers
 # number who responded
-load('data/3_AnalysisReady.RData') # from 3_read_qualtrics_api.R
+load('rdata/3_AnalysisReady.RData') # from 3_read_qualtrics_api.R
 rias_responded = nrow(data)
 # bounced emails:
 invalid_email = read_excel(path = 'data/email_bounced_away.xlsx', sheet = 'Bounced') %>% nrow()
@@ -54,7 +54,7 @@ rias_analysed = rias_responded - not_consent - not_ria
 
 # labels, big N for institutions, little n for RIAs
 l1 = paste('Number of institutions\n(N=', N_inst, ')', sep='') # 
-l2 = paste('RIAs uncontactable\n(N=', not_contactable, ')', sep='') # 
+l2 = paste('RIAs not contacted\n(N=', not_contactable, ')', sep='') # 
 l3 = paste('RIAs not publicly\navailable (N=', not_available, ')', sep='') # 
 l4 = paste('RIAs publicly\navailable (N=', available, ')', sep='') # 
 # 
@@ -152,4 +152,4 @@ save(N_inst,
      rias_with_email,
      rias_responded, 
      response_frame,
-     file = 'data/flow_numbers.RData')
+     file = 'rdata/flow_numbers.RData')
