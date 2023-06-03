@@ -54,6 +54,7 @@ make_table = function(indata,  # survey data
                       rel_widths = c(1.4, 1), # relative width for pyramid plots
                       sample_colours = sample_colours, # colours for random and non-random sample
                       type = 'categorical',
+                      expand_num = 5, # upper expand number on y-axis
                       plot.type = 'histogram'){
   
   # null plots needed for saving
@@ -197,6 +198,7 @@ make_table = function(indata,  # survey data
     if(plot.type == 'histogram'){
       plot = ggplot(data=indata, aes(x=var))+
       geom_histogram(fill = sample_colours[1], col='grey66')+
+      scale_y_continuous(expand=c(0,expand_num))+
       ylab('Count')+
       xlab(ylab)+
       g.theme

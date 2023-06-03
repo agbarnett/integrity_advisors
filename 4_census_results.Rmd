@@ -90,7 +90,7 @@ hplot = ggplot(data = all_boot, aes(x = total))+
 hplot
 ```
 
-The estimated median number of national advisors is `r median(all_boot$total)` with 1st quartile of `r quantile(all_boot$total, 0.25)` and 3rd quartile of `r quantile(all_boot$total, 0.75)`. A 95% bootstrap interval is `r quantile(all_boot$total, 0.025)` to `r quantile(all_boot$total, 0.975)`.
+The estimated median number of national advisors is `r median(all_boot$total)` with 1st quartile of `r quantile(all_boot$total, 0.25)` and 3rd quartile of `r quantile(all_boot$total, 0.75)`. A 95% bootstrap interval is `r round(quantile(all_boot$total, 0.025))` to `r round(quantile(all_boot$total, 0.975))`.
 
 ## Questionnaire
 
